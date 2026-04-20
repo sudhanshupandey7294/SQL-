@@ -141,3 +141,107 @@ INSERT INTO audit_log(table_name_, action_type, record_id, old_value, new_value)
 VALUES('accounts', 'INSERT', NEW.account_id, OLD.balance, NEW.balance);
 END IF;
 END //DELIMITER ;
+
+#______________________________________________________________________________________________________________________________________
+#Exercise 6: BEFORE DELETE 
+#Backup account details into deleted_accounts before deletion 
+DELIMITER //
+CREATE TRIGGER backup_account
+BEFORE DELETE ON accounts
+FOR EACH ROW 
+BEGIN
+INSERT INTO deleted_accounts(account_id, customer_id, balance, account_type)
+VALUES (OLD.account_id, OLD.customer_id, OLD.balance, OLD.account_type);
+END // DELIMITER ;
+
+DELETE FROM accounts
+WHERE account_id = 2;
+SELECT * FROM accounts;
+SELECT * FROM deleted_accounts;
+
+#_______________________________________________________________________________________________________________________________
+#Exercise 7: BEFORE DELETE 
+#Prevent deletion of accounts with balance greater than 0 
+
+DELIMITER //
+CREATE TRIGGER prevent_deletion
+BEFORE DELETE ON accounts
+FOR EACH ROW 
+BEGIN
+IF balance>0 THEN
+SIGNAL SQLSTATE '45000'
+SET MESSAGE_TEXT = 'Balance greater than cannot be deleted';
+END IF ;
+END // DELIMITER ;
+
+SELECT * FROM accounts;
+DELETE FROM accounts
+WHERE account_id=3;
+
+#__________________________________________________________________________________________________________________
+#Exercise 8: AFTER INSERT (Transactions) 
+#When a DEPOSIT happens, automatically increase account balance
+
+DELIMITER //
+CREATE TRIGGER auto_increase_balance
+AFTER INSERT ON transactions
+FOR EACH ROW
+BEGIN
+IF NEW.transaction_type = 'DEPOSIT' THEN
+        UPDATE accounts
+        SET balance = balance + NEW.amount
+        WHERE account_id = NEW.account_id;
+    END IF;
+END //DELIMITER ;
+
+INSERT INTO transactions (account_id, amount, transaction_type)
+VALUES (3, 2000, 'DEPOSIT');
+
+SELECT * FROM transactions;
+
+#_________________________________________________________________________________------
+#Exercise 9: AFTER INSERT (Transactions) 
+#When a WITHDRAW happens: - Deduct amount from balance - Prevent withdrawal if insufficient balance 
+
+-- DELIMITER //
+-- CREATE TRIGGER w_d_p
+-- BEFORE INSERT ON transactions
+-- FOR EACH ROW
+-- BEGIN
+-- IF NEW.transaction_type='WITHDRAW' THEN UPDATE accounts SET balance= balance - NEW.amount
+-- WHERE account_id= NEW.account_id;
+-- IF balance=0 THEN 
+-- SIGNAL SQLSTATE '45000'
+-- SET MESSAGE_TEXT = ' INSUFFICIET BALANCE, CANNOT WITHDRAW';
+-- END IF;
+-- END IF;
+-- END //DELIMITER ;
+
+
+# 1. BEFORE INSERT -check_balance
+DELIMITER $$
+CREATE TRIGGER b_check
+BEFORE INSERT ON transactions
+FOR EACH ROW
+BEGIN
+    IF NEW.transaction_type = 'WITHDRAW' AND 
+       (SELECT balance FROM accounts WHERE account_id = NEW.account_id) < NEW.amount
+    THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Insufficient balance';
+    END IF;
+END $$ DELIMITER ;
+		
+#2 AFTER INSERT -Update_balance
+
+DELIMITER $$
+CREATE TRIGGER w_update
+AFTER INSERT ON transactions
+FOR EACH ROW
+BEGIN
+    IF NEW.transaction_type = 'WITHDRAW' THEN
+        UPDATE accounts
+        SET balance = balance - NEW.amount
+        WHERE account_id = NEW.account_id;
+    END IF;
+END $$ DELIMITER ;
