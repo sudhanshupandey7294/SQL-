@@ -245,3 +245,164 @@ BEGIN
         WHERE account_id = NEW.account_id;
     END IF;
 END $$ DELIMITER ;
+
+
+#_______________________________________________________________________________________________________________________________
+#Exercise 10: AFTER INSERT 
+#Log every transaction in audit_log
+
+DELIMITER //
+CREATE TRIGGER log_in_audit
+AFTER INSERT ON accounts
+FOR EACH ROW
+BEGIN
+INSERT INTO audit_log(table_name_, action_type, record_id) VALUES('accounts', 'INSERT', NEW.account_id);
+END // DELIMITER ;
+
+#_______________________________________________________________________________________________________________________________
+#Exercise 11: BEFORE UPDATE 
+#Prevent changing account_type once created 
+
+DELIMITER //
+CREATE TRIGGER prev_acc_type
+BEFORE UPDATE ON accounts
+FOR EACH ROW
+BEGIN
+IF OLD.account_type <> NEW.account_type THEN
+SIGNAL SQLSTATE '45000'
+SET MESSAGE_TEXT = 'Account type cannot be changed';
+END IF;
+END //DELIMITER ;
+
+#________________________________________________________________________________________________________________________________
+
+#Exercise 12: AFTER UPDATE 
+#Track account type changes in audit_log 
+
+
+select* FROM audit_log;
+
+DELIMITER $$
+CREATE TRIGGER track_account_type
+AFTER UPDATE ON accounts
+FOR EACH ROW
+BEGIN
+IF OLD.account_type<> NEW.account_type THEN
+INSERT INTO audit_log(table_name_, action_type, record_id, old_value, new_value)
+VALUES('accounts', 'UPDATE_TYPE',NEW.account_id, OLD.account_type, NEW.account_type);
+END IF;
+END $$ DELIMITER ;
+
+#________________________________________________________________________________________________________
+#Prevent changing city to NULL 
+
+DELIMITER //
+CREATE TRIGGER prev_change_city
+BEFORE UPDATE ON customers
+FOR EACH ROW
+BEGIN
+IF NEW.city IS NULL THEN
+SIGNAL SQLSTATE '45000'
+SET MESSAGE_TEXT= 'CITY cannot be changed';
+END IF;
+END // DELIMITER ;
+
+
+#________________________________________________________________
+#Automatically create a default account for every new customer
+DELIMITER //
+CREATE TRIGGER create_default_account
+AFTER INSERT ON customers
+FOR EACH ROW
+BEGIN
+INSERT INTO accounts(customer_id, balance, account_type)
+VALUEs(NEW.customer_id, 10000, 'SAVINGS');
+END // DELIMITER ;
+
+#__________________________________________________
+#Exercise 13: BEFORE INSERT (Customers) 
+#Ensure email is unique (even without unique constraint) 
+DELIMITER $$
+
+CREATE TRIGGER unique_email_update
+BEFORE UPDATE ON customers
+FOR EACH ROW
+BEGIN
+    IF NEW.email <> OLD.email AND 
+       (SELECT COUNT(*) FROM customers WHERE email = NEW.email) > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Email already exists';
+    END IF;
+END $$
+
+DELIMITER ;
+#________________________________________________________________________________
+#Exercise 16 
+#Maintain a separate table to count total transactions per account
+
+CREATE TABLE account_transaction_count (
+    account_id INT PRIMARY KEY,
+    total_transactions INT DEFAULT 0,
+    FOREIGN KEY (account_id) REFERENCES accounts(account_id)
+);
+DELIMITER //
+CREATE TRIGGER transaction_acc_
+AFTER INSERT ON transactions
+FOR EACH ROW
+BEGIN
+INSERT INTO account_transaction_count(account_id, total_transactions)
+VALUES(NEW.account_id, 1);
+#ON DUPLICATE KEY UPDATE 
+ #   total_transactions = total_transactions + 1;
+END // DELIMITER ;
+#____________________________________________________________________________________________________--
+#Exercise 20 
+#Maintain a history table for all balance changes 
+CREATE TABLE balance_history (
+    history_id INT AUTO_INCREMENT PRIMARY KEY,
+    account_id INT,
+    old_balance DECIMAL(10,2),
+    new_balance DECIMAL(10,2),
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES accounts(account_id)
+);
+
+DELIMITER $$
+
+CREATE TRIGGER track_balance_history
+AFTER UPDATE ON accounts
+FOR EACH ROW
+BEGIN
+    IF OLD.balance <> NEW.balance THEN
+        INSERT INTO balance_history (account_id, old_balance, new_balance)
+        VALUES (NEW.account_id, OLD.balance, NEW.balance);
+    END IF;
+END $$
+
+DELIMITER ;
+
+#___________________________________________________________________________
+#Exercise 18 
+#Prevent more than 3 withdrawals per day per account 
+
+DELIMITER $$
+
+CREATE TRIGGER limit_daily_withdrawals
+BEFORE INSERT ON transactions
+FOR EACH ROW
+BEGIN
+    IF NEW.transaction_type = 'WITHDRAW' THEN
+        IF (
+            SELECT COUNT(*) 
+            FROM transactions
+            WHERE account_id = NEW.account_id
+              AND transaction_type = 'WITHDRAW'
+              AND DATE(transaction_time) = CURDATE()
+        ) >= 3 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Daily withdrawal limit exceeded';
+        END IF;
+    END IF;
+END $$
+
+DELIMITER ;
