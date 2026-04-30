@@ -111,3 +111,17 @@ SELECT emp_name, salary, dept_name FROM Employees E LEFT JOIN Departments D ON E
 #Advanced Level
 #18. Find the highest salary in each department
 SELECT dept_name, MAX(salary)AS Highest_salary FROM Employees E  JOIN Departments D ON E.dept_id=D.dept_id GROUP BY dept_name;
+
+#Q36 
+
+SELECT e.emp_id , e.emp_name FROM Employees AS e
+JOIN Projects AS p
+ON e.emp_id = p.emp_id
+GROUP BY emp_id , emp_name
+HAVING COUNT(DISTINCT p.project_name) = (SELECT count(*) FROM Projects);
+
+
+#Q37
+
+SELECT E1.emp_id , E1.emp_name , E1.salary, E1.dept_id FROM Employees E1 JOIN Employees E2 ON 
+E1.dept_id=E2.dept_id AND E1.salary= E2.salary AND E1.emp_id <>E2.emp_id;

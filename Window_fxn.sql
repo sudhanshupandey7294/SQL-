@@ -72,7 +72,7 @@ SELECT *, esal*0.20 AS Bonus FROM employee WHERE Bonus>6000; # error no Bonus co
 
 WITH myemployee_ AS (
 SELECT *, esal*0.20 AS Bonus FROM employee
-) SELECT * FROM myemployee_;         # NOW using CTE it will create a virtual table "myemployee" originated from "employee" table and run "Bonus"  
+) SELECT * FROM myemployee_ WHERE Bonus>6000;         # NOW using CTE it will create a virtual table "myemployee" originated from "employee" table and run "Bonus"  
 
 SELECT * FROM myemploye_; # IT will not work bacause myemployee is a virtual table 
 
