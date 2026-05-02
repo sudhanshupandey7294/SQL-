@@ -63,6 +63,6 @@ INSERT INTO student VALUE(101,"Raman","Noida",301);
 SELECT * FROM student;
 SELECT * FROM course;
 
-UPDATE course SET cid=305 WHERE cid=301;   ## using ON UPDATE CASCADE with FOREIGN KEY column we can Update (change and re set) the parent table 
-DELETE FROM course WHERE cid=305;    ## using ON DELETE CASCADE with FOREIGN KEY we can delete the parent table
+UPDATE course SET cid=305 WHERE cid=301;   ## using ON UPDATE CASCADE with FOREIGN KEY column we can Update (change and re set) the colum of parent table 
+DELETE FROM course WHERE cid=305;    ## using ON DELETE CASCADE with FOREIGN KEY we can delete the column of parent table
 
