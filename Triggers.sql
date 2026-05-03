@@ -121,6 +121,7 @@ END // DELIMITER ;
 INSERT INTO employee(ename , eadd , edesg , esal)
 VALUE('EVE' , 'Noida' , 'IT' , 75238);
 
+
 SHOW WARNINGS;
 SET @myname = "Mohit Kumar";
 SELECT @myname; 
