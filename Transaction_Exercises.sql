@@ -66,3 +66,88 @@ UPDATE accounts SET balance = balance - 10000 WHERE account_name = 'Bob';
 ROLLBACK;
 
 -- If all valid → COMMIT;
+
+-- Schema 2: E-Commerce Orders 
+CREATE TABLE products ( 
+product_id INT PRIMARY KEY, 
+product_name VARCHAR(50), 
+stock INT 
+); 
+CREATE TABLE orders ( 
+order_id INT PRIMARY KEY, 
+product_id INT, 
+quantity INT 
+); 
+INSERT INTO products VALUES 
+(1, 'Laptop', 10), 
+(2, 'Phone', 20); 
+
+SELECT *FROM products;
+
+#Q6. Start a transaction and place an order for 2 laptops. Reduce stock accordingly. 
+
+START TRANSACTION;
+SET SQL_SAFE_UPDATES=0;
+UPDATE orders SET quantity ='2' WHERE product_id ='1';
+UPDATE products SET stock=stock-2 WHERE product_id ='1';
+SELECT *FROM products;
+
+#Q7. Place an order where stock is insufficient. Rollback the transaction. 
+
+-- MAKE STOCK 0
+START TRANSACTION;
+UPDATE orders SET quantity ='8' WHERE product_id ='1';
+UPDATE products SET stock=stock-8 WHERE product_id ='1';
+SELECT *FROM products;
+
+-- After 0 stock Rollback
+UPDATE orders SET quantity ='10' WHERE product_id ='1';
+UPDATE products SET stock=stock-10 WHERE product_id ='1';
+# Stock is negative ie insufficient
+ROLLBACK;
+SELECT *FROM products;
+
+#Q8. Insert order and update stock in a single transaction. Commit only if both succeed. 
+INSERT INTO orders VALUES(1,1, 10);
+START TRANSACTION;
+UPDATE products SET stock= stock-10 WHERE product_id='1';
+COMMIT;
+SELECT* FROM orders;
+SELECT* FROM products;
+
+#Q9 Simulate failure after inserting order but before updating stock. Rollback changes. 
+START TRANSACTION;
+
+INSERT INTO orders (order_id, product_id, quantity)
+VALUES (3, 1, 2);
+
+-- Simulated failure
+ROLLBACK;
+
+
+#Q10 Perform bulk order inserts and rollback if any product stock becomes negative. 
+INSERT INTO orders VALUES(2, 1, 30);
+UPDATE products SET stock=stock-30 WHERE product_id='1';
+SELECT* FROM orders;
+SELECT* FROM products;
+#product stock is negative as it has only 10 But i have ordered 30 
+-- So Rollback it
+ROLLBACK;
+
+-- Schema 3: Employee Salary Update 
+CREATE TABLE employees ( 
+emp_id INT PRIMARY KEY, 
+emp_name VARCHAR(50), 
+salary DECIMAL(10,2) 
+); 
+INSERT INTO employees VALUES 
+(1, 'John', 40000), 
+(2, 'Jane', 45000), 
+(3, 'Mike', 50000);
+
+#Q11. Increase salary of all employees by 10% using a transaction.  
+
+START TRANSACTION;
+SET SQL_SAFE_UPDATES=0;
+UPDATE employees SET salary=salary +0.10*salary;
+SELECT* FROM employees;

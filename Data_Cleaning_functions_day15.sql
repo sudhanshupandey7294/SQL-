@@ -61,6 +61,8 @@ SELECT CURRENT_TIME();
 SELECT YEAR(CURDATE());
 SELECT MONTH(CURDATE());
 SELECT DAY(CURDATE());
+SELECT DATE_ADD(CURRENT_DATE() , INTERVAL 30 DAY) ; #to add some days in dates
+SELECT DATEDIFF(CURRENT_DATE, other_dates); # TO find the difference b/w two dates
 
 # Conditional Formula
 # IF , IFNULL , NULLIF , CASE
