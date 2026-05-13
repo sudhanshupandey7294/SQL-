@@ -215,3 +215,72 @@ SELECT LAST_VALUE(emp_name) OVER(ORDER BY hire_date) FROM employeez;
 SELECT *, NTILE(4) OVER(ORDER BY salary DESC) FROM employeez;  
 #41. Divide orders into 3 buckets based on amount. 
 SELECT *, NTILE(3) OVER(ORDER BY order_amount DESC) FROM order_;
+
+#_______________________________________________________________________________________________________________________________________________
+#Advanced Window Problems 
+#Q42. Find employees earning more than department average. 
+SELECT * FROM employeez e WHERE salary > (SELECT AVG(salary) FROM employeez  WHERE dept_id= e.dept_id);
+
+SELECT * FROM 
+(SELECT *, AVG(salary) OVER(PARTITION BY dept_id) AS dept_avg_salary FROM employeez) AS emp
+ WHERE salary > dept_avg_salary;
+ 
+ #43. Find second highest salary per department.  
+ #SELECT emp_name, salary FROM employeez ORDER BY salary DESC LIMIT 2;
+WITH second_highest_sal AS(
+SELECT *, DENSE_RANK() OVER(PARTITION BY dept_id ORDER BY salary DESC) AS rnk FROM employeez) 
+SELECT * FROM second_highest_sal WHERE rnk=2;
+
+#44. Find duplicate salaries within same department.  
+SELECT dept_id, salary, COUNT(*) AS total FROM employeez GROUP BY dept_id, salary 
+HAVING COUNT(*)>1;
+
+#45. Find employees whose salary is greater than previous employee. 
+	WITH sal_greaterthan_prev AS 
+    (SELECT *,LAG(salary) OVER(PARTITION BY emp_id ORDER BY salary) AS prev_salary FROM employeez)
+    SELECT * FROM sal_greaterthan_prev WHERE salary > prev_salary;
+ 
+#46. Find gap between consecutive hire dates.  
+SELECT *, LAG(hire_date) OVER(ORDER BY hire_date) AS prev_hire_date, DATEDIFF(hire_date, LAG(hire_date) OVER(ORDER BY hire_date) )
+AS hire_gap 
+FROM employeez;
+
+#47. Identify increasing salary trend.  
+    WITH salary_trend AS (
+    SELECT emp_id,emp_name,salary,LAG(salary) OVER (ORDER BY emp_id) AS prev_salary
+    FROM employeez)
+SELECT * FROM salary_trend
+WHERE salary > prev_salary;
+    
+#48.Find cumulative average salary.  
+SELECT emp_id,
+       emp_name,
+       salary,
+       AVG(salary) OVER (
+           ORDER BY emp_id
+       ) AS cumulative_avg_salary
+FROM employees;
+
+#49. Find top-performing employees based on total orders.  
+SELECT emp_name, SUM(order_amount) AS total_order FROM employeez e JOIN order_ o ON e.dept_id=o.emp_id GROUP BY  emp_name ORDER BY total_order DESC LIMIT 1;
+
+#50. Show percentage contribution of each employee's salary to department total.  
+SELECT emp_name, salary, salary*100/SUM(salary) OVER(PARTITION BY dept_id) AS salary_percentage FROM employeez;
+
+
+#51. Find employees who never made any orders.  
+SELECT * FROM employeez e JOIN order_ o ON e.emp_id =o.emp_id WHERE o.order_id IS NULL;
+
+#52. Find employees whose salary is above overall average.  
+WITH sal_above_overall_table AS(
+SELECT emp_name, salary, AVG(salary) OVER() AS AVG_sal FROM employeez 
+)SELECT * FROM sal_above_overall_table WHERE salary> AVG_sal;
+
+#53. Find employees who made highest order in each department.  
+WITH highest_order AS (
+SELECT emp_name, order_amount, DENSE_RANK() OVER(PARTITION BY e.dept_id ORDER BY order_amount DESC) AS Rnk FROM employeez e JOIN order_ o ON 
+e.emp_id=o.emp_id ) 
+SELECT * FROM highest_order WHERE Rnk=1;
+
+#54. Find running difference between order amounts.  
+#55. Detect outliers in salary using window functions.  
